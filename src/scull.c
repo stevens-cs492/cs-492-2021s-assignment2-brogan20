@@ -84,7 +84,7 @@ void* func(void* args) {
 	if (ret != 0) {
 		pthread_exit((void *)-1);
 	}
-	
+
 	printf("state %lu, stack %lx, cpu %u, prio %d, sprio %d, nprio %d, rtprio %u, pid %d, tgid %d, nv %ul, niv %ul\n", t.state, (unsigned long)t.stack, t.cpu, t.prio, t.static_prio, t.normal_prio, t.rt_priority, t.pid, t.tgid, t.nvcsw, t.nivcsw);
 	pthread_exit(NULL);
 }
@@ -150,14 +150,14 @@ static int do_op(int fd, cmd_t cmd)
 		for (i = 0; i < g_quantum; i++) {
 			if (pthread_create(&pids[i], NULL, &func, (void*)&fd) != 0) {
 				ret = -1;
-				goto err;
+				printf("Could not create thread %d", i);
 			}
 		}
 		// Finish threads
 		for (i = 0; i < g_quantum; i++) {
-			if (pthread_join(&pids[i], NULL) != 0) {
+			if (pthread_join(pids[i], NULL) != 0) {
 				ret = -1;
-				break;
+				printf("Could not join thread %d", i);
 			}
 		}
 		

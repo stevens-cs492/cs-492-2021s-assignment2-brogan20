@@ -173,10 +173,9 @@ static int do_op(int fd, cmd_t cmd)
 
 		// Spawn the children
 		for (i = 0; i < g_quantum; i++) {
-			if (fork() == -1) {
-				ret = -1;
+			if ((ret = fork()) == -1) {
 				printf("Could not spawn process %d", i);
-			} else if (fork() == 0) {
+			} else if (ret == 0) {
 				ret = ioctl(fd, SCULL_IOCKQUANTUM, &t);
 				printf("state %lu, stack %lx, cpu %u, prio %d, sprio %d, nprio %d, rtprio %u, pid %d, tgid %d, nv %lu, niv %lu\n", t.state, (unsigned long)t.stack, t.cpu, t.prio, t.static_prio, t.normal_prio, t.rt_priority, t.pid, t.tgid, t.nvcsw, t.nivcsw);
 				exit(ret);

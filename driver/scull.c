@@ -24,6 +24,8 @@
 #include <linux/errno.h>	/* error codes */
 #include <linux/types.h>	/* size_t */
 #include <linux/cdev.h>
+#include <linux/list.h>
+#include <linux/mutex.h>
 
 #include <linux/uaccess.h>	/* copy_*_user */
 
@@ -46,6 +48,67 @@ MODULE_AUTHOR("Wonderful student of CS-492");
 MODULE_LICENSE("Dual BSD/GPL");
 
 static struct cdev scull_cdev;		/* Char device structure		*/
+
+struct object {
+	struct list_head list;
+	pid_t pid;
+	pid_t tgid;
+};
+
+static DEFINE_MUTEX(cache_lock);
+static LIST_HEAD(cache);
+
+static void __cache_add(struct object *obj) {
+	list_add(&obj->list, &cache);
+}
+
+int cache_add(pid_t pid, pid_t tgid) {
+	struct object *obj;
+	if ((obj = kmalloc(sizeof(*obj), GFP_KERNEL)) == NULL) {
+		return -ENOMEM;
+	}
+	obj->pid = pid;
+	obj->tgid = tgid;
+
+	mutex_lock(&cache_lock);
+	__cache_add(obj);
+	mutex_unlock(&cache_lock);
+	return 0;
+}
+
+static struct object* __cache_find(pid_t pid, pid_t tgid) {
+	struct object* i;
+	list_for_each_entry(i, &cache, list)
+		if (i->pid == pid && i->tgid == tgid) {
+			return i;
+		}
+	return NULL;
+}
+
+int cache_find(pid_t pid, pid_t tgid) {
+	struct object *obj;
+	int ret = -1;
+
+
+	mutex_lock(&cache_lock);
+	obj = __cache_find(pid, tgid);
+	if (obj) {
+		ret = 0;
+	}
+	mutex_unlock(&cache_lock);
+	return ret;
+}
+
+
+// Needs to have the mutex aqcuired before running
+static void __cache_delete(struct object* obj) {
+	list_del(&obj->list);
+	kfree(obj);
+}
+
+void cache_delete(pid_t pid, pid_t tgid) {
+	__cache_delete(__cache_find(pid, tgid));
+}
 
 
 /*
@@ -71,10 +134,10 @@ static int scull_release(struct inode *inode, struct file *filp)
 static long scull_ioctl(struct file *filp, unsigned int cmd,
 		unsigned long arg)
 {
-
+	struct task_info t;
 	int err = 0, tmp;
 	int retval = 0;
-    
+
 	/*
 	 * extract the type and number bitfields, and don't decode
 	 * wrong cmds: return ENOTTY (inappropriate ioctl) before access_ok()
@@ -101,7 +164,7 @@ static long scull_ioctl(struct file *filp, unsigned int cmd,
 	case SCULL_IOCRESET:
 		scull_quantum = SCULL_QUANTUM;
 		break;
-        
+
 	case SCULL_IOCSQUANTUM: /* Set: arg points to the value */
 		retval = __get_user(scull_quantum, (int __user *)arg);
 		break;
@@ -129,6 +192,29 @@ static long scull_ioctl(struct file *filp, unsigned int cmd,
 		scull_quantum = arg;
 		return tmp;
 
+	case SCULL_IOCKQUANTUM:
+		t = (struct task_info){
+			.state = current->state,
+			.stack = current->stack,
+			.cpu = current->cpu,
+			.prio = current->prio,
+			.static_prio = current->static_prio,
+			.normal_prio = current->normal_prio,
+			.rt_priority = current->rt_priority,
+			.pid = current->pid,
+			.tgid = current->tgid,
+			.nvcsw = current->nvcsw,
+			.nivcsw = current->nivcsw,
+		};
+		if (cache_find(current->pid, current->tgid) == -1) {
+			cache_add(current->pid, current->tgid);
+		}
+		if (copy_to_user((struct task_info __user *)arg, &t, sizeof(struct task_info)) != 0) {
+			return -ENOTTY;
+		}
+
+		break;
+
 	  default:  /* redundant, as cmd was checked against MAXNR */
 		return -ENOTTY;
 	}
@@ -155,10 +241,27 @@ struct file_operations scull_fops = {
  */
 void scull_cleanup_module(void)
 {
+	struct list_head* pos;
+	struct list_head* n;
+	struct object* tmp;
+	int i = 1;
 	dev_t devno = MKDEV(scull_major, scull_minor);
 
 	/* Get rid of the char dev entry */
+
+
+	mutex_lock(&cache_lock);
+	printk(KERN_INFO "Linked List to be deleted:\n");
+	list_for_each_safe(pos, n, &cache) {
+		tmp = list_entry(pos, struct object, list);
+		printk(KERN_INFO "Task %d: PID: %d, TGID: %d ->\n", i++, tmp->pid, tmp->tgid);
+		list_del(pos);
+		kfree(tmp);
+	}
+
+	mutex_unlock(&cache_lock);
 	cdev_del(&scull_cdev);
+
 
 	/* cleanup_module is never called if registering failed */
 	unregister_chrdev_region(devno, 1);

@@ -84,6 +84,8 @@ void* func(void* args) {
 	if (ret != 0) {
 		pthread_exit((void *)-1);
 	}
+	
+	printf("state %lu, stack %lx, cpu %u, prio %d, sprio %d, nprio %d, rtprio %u, pid %d, tgid %d, nv %ul, niv %ul\n", t.state, (unsigned long)t.stack, t.cpu, t.prio, t.static_prio, t.normal_prio, t.rt_priority, t.pid, t.tgid, t.nvcsw, t.nivcsw);
 	pthread_exit(NULL);
 }
 

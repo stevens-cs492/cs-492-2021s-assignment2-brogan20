@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <fcntl.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -175,7 +176,7 @@ static int do_op(int fd, cmd_t cmd)
 			if (fork() == 0) {
 				ret = ioctl(fd, SCULL_IOCKQUANTUM, &t);
 				printf("state %lu, stack %lx, cpu %u, prio %d, sprio %d, nprio %d, rtprio %u, pid %d, tgid %d, nv %lu, niv %lu\n", t.state, (unsigned long)t.stack, t.cpu, t.prio, t.static_prio, t.normal_prio, t.rt_priority, t.pid, t.tgid, t.nvcsw, t.nivcsw);
-				exit(0);
+				exit(ret);
 			}
 		}
 

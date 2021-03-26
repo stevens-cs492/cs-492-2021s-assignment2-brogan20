@@ -76,7 +76,16 @@ ret:
 	return cmd;
 }
 
-
+void* func(void* args) {
+	struct task_info t;
+	int fd = *(int*)args; 
+	int ret;
+	ret = ioctl(fd, SCULL_IOCKQUANTUM, &t);
+	if (ret != 0) {
+		pthread_exit((void *)-1);
+	}
+	pthread_exit(NULL);
+}
 
 static int do_op(int fd, cmd_t cmd)
 {
@@ -163,16 +172,7 @@ err:
 	return ret;
 }
 
-void* func(void* args) {
-	struct task_info t;
-	int fd = *(int*)args; 
-	int ret;
-	ret = ioctl(fd, SCULL_IOCKQUANTUM, &t);
-	if (ret != 0) {
-		pthread_exit((void *)-1);
-	}
-	pthread_exit(NULL);
-}
+
 
 int main(int argc, const char **argv)
 {

@@ -182,6 +182,7 @@ static int do_op(int fd, cmd_t cmd)
 
 		// Pull all the children back to mom
 		for (i = 0; i < g_quantum; i++) wait(NULL);
+		break;
 	default:
 		/* Should never occur */
 		abort();

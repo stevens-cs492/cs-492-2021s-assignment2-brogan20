@@ -92,7 +92,7 @@ void* func(void* args) {
 
 static int do_op(int fd, cmd_t cmd)
 {
-	int ret, q;
+	int ret = 0, q;
 	pthread_t pids[10];
 	struct task_info t;
 	int i;

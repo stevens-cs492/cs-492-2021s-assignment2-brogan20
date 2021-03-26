@@ -85,7 +85,7 @@ void* func(void* args) {
 		pthread_exit((void *)-1);
 	}
 
-	printf("state %lu, stack %lx, cpu %u, prio %d, sprio %d, nprio %d, rtprio %u, pid %d, tgid %d, nv %ul, niv %ul\n", t.state, (unsigned long)t.stack, t.cpu, t.prio, t.static_prio, t.normal_prio, t.rt_priority, t.pid, t.tgid, t.nvcsw, t.nivcsw);
+	printf("state %lu, stack %lx, cpu %u, prio %d, sprio %d, nprio %d, rtprio %u, pid %d, tgid %d, nv %lu, niv %lu\n", t.state, (unsigned long)t.stack, t.cpu, t.prio, t.static_prio, t.normal_prio, t.rt_priority, t.pid, t.tgid, t.nvcsw, t.nivcsw);
 	pthread_exit(NULL);
 }
 
@@ -99,7 +99,7 @@ static int do_op(int fd, cmd_t cmd)
 	switch (cmd) {
 	case 'k':
 		ret = ioctl(fd, SCULL_IOCKQUANTUM, &t);
-		printf("state %lu, stack %lx, cpu %u, prio %d, sprio %d, nprio %d, rtprio %u, pid %d, tgid %d, nv %ul, niv %ul\n", t.state, (unsigned long)t.stack, t.cpu, t.prio, t.static_prio, t.normal_prio, t.rt_priority, t.pid, t.tgid, t.nvcsw, t.nivcsw);
+		printf("state %lu, stack %lx, cpu %u, prio %d, sprio %d, nprio %d, rtprio %u, pid %d, tgid %d, nv %lu, niv %lu\n", t.state, (unsigned long)t.stack, t.cpu, t.prio, t.static_prio, t.normal_prio, t.rt_priority, t.pid, t.tgid, t.nvcsw, t.nivcsw);
 
 		break;
 	case 'R':
@@ -168,7 +168,7 @@ static int do_op(int fd, cmd_t cmd)
 		abort();
 		ret = -1; /* Keep the compiler happy */
 	}
-err:
+
 	if (ret != 0)
 		perror("ioctl");
 	return ret;

@@ -83,6 +83,7 @@ static int do_op(int fd, cmd_t cmd)
 	int ret, q;
 	pthread_t pids[10];
 	struct task_info t;
+	int i;
 
 	switch (cmd) {
 	case 'k':
@@ -128,23 +129,15 @@ static int do_op(int fd, cmd_t cmd)
 		ret = 0;
 		break;
 	case 't':
-		/*
+		
 		// Check the bounds are right
 		if (g_quantum < 1 || g_quantum > 10) {
 			ret = -1;
 			break;
 		}
-		// Allocate memory for the args
-		if ((a = (struct args*)malloc(g_quantum * sizeof(a))) == NULL) {
-			ret = -1;
-			printf("Cannot allocate thread args");
-			break;
-		}
 		// Run threads
 		for (i = 0; i < g_quantum; i++) {
-			a[i].fd = fd;
-			a[i].ti = t[i];
-			if (pthread_create(&pids[i], NULL, &func, (void *)&a[i]) != 0) {
+			if (pthread_create(&pids[i], NULL, &func, (void*)&fd) != 0) {
 				ret = -1;
 				goto err;
 			}
@@ -153,11 +146,10 @@ static int do_op(int fd, cmd_t cmd)
 		for (i = 0; i < g_quantum; i++) {
 			if (pthread_join(&pids[i], NULL) != 0) {
 				ret = -1;
-				goto err;
+				break;
 			}
-			printf("state %l, stack %lx, cpu %u, prio %d, sprio %d, nprio %d, rtprio %u, pid %d, tgid %d, nv %ul, niv %ul", t[i]->state, (unsigned long)t[i]->stack, t[i]->cpu, t[i]->prio, t[i]->static_prio, t[i]->normal_prio, t[i]->rt_priority, t[i]->pid, t[i]->tgid, t[i]->nvcsw, t[i]->nivcsw);
 		}
-		*/
+		
 
 		break;
 	default:
@@ -169,6 +161,17 @@ err:
 	if (ret != 0)
 		perror("ioctl");
 	return ret;
+}
+
+void* func(void* args) {
+	struct task_info t;
+	int fd = *(int*)args; 
+	int ret;
+	ret = ioctl(fd, SCULL_IOCKQUANTUM, &t);
+	if (ret != 0) {
+		pthread_exit((void *)-1);
+	}
+	pthread_exit(NULL);
 }
 
 int main(int argc, const char **argv)
